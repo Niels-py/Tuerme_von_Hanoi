@@ -1,10 +1,12 @@
 fn main() {
+    let max_len = 4;
+
     // variablen initialisieren
     let mut board: [Vec<Scheibe>; 3] = [Vec::new(), Vec::new(), Vec::new()];
     let reader = std::io::stdin();
     // einen Turm machen
-    for i in 0..10 {
-        board[0].push(Scheibe::new(10 - i));
+    for i in 0..max_len {
+        board[0].push(Scheibe::new(max_len - i));
     }
 
     // Die Spielbeschreibung (Formatierung nicht ändern)
@@ -16,14 +18,7 @@ Hier ein Beispiel wenn du die Scheibe von Stapel 3 auf Stapel 1 verschieben möc
 
     // der GAME LOOP
     loop {
-        // Die CLI Ausgabe
-        println!(
-            "{}{}\n          01{}02{}03\n",
-            print_board(&board),
-            "_".repeat(68),
-            " ".repeat(20),
-            " ".repeat(20)
-        );
+        print_board(&board, max_len as usize);
 
         // Die Spielereingabe bekommen
         let mut input = String::new();
@@ -61,26 +56,52 @@ Hier ein Beispiel wenn du die Scheibe von Stapel 3 auf Stapel 1 verschieben möc
                 let temp = board[arg[0] - 1].pop().unwrap();
                 board[arg[1] - 1].push(temp);
             } else {
-                println!("Beachte die Regeln!\nDu darfst keine Scheibe auf eine kleinere Scheibe legen!\nSonst wäre es doch zu einfach.")
+                println!("Beachte die Regeln!\nDu darfst keine Scheibe auf eine kleinere Scheibe legen!\nSonst wäre es doch zu einfach.\n")
             }
         } else {
-            println!("Gebe zwei Ziffern an die mit einem leerzeichen getrennt sind.\nDabei ist die erste Ziffer der Stapel von dem du die Scheibe nimmst.\nUnd die zweite Ziffer ist der Stapel auf den du die Scheibe ablegen möchtest.");
+            println!("Gebe zwei Ziffern an die mit einem leerzeichen getrennt sind.\nDabei ist die erste Ziffer der Stapel von dem du die Scheibe nimmst.\nUnd die zweite Ziffer ist der Stapel auf den du die Scheibe ablegen möchtest.\n");
+        }
+        if won(&board, max_len as usize) {
+            break;
         }
     }
+    print_board(&board, max_len as usize);
+
+    println!("\nDu hast gewonnen!");
 }
 
-// gibt einen String mit den Türmen zurrück
-fn print_board(board: &[Vec<Scheibe>; 3]) -> String {
+// tested, ob man gewonnen hat
+fn won(board: &[Vec<Scheibe>; 3], max_len: usize) -> bool {
+    if board[2].len() == max_len || board[1].len() == max_len {
+        return true;
+    }
+    false
+}
+
+// Die CLI Ausgabe
+fn print_board(board: &[Vec<Scheibe>; 3], max_len: usize) {
+    println!(
+        "{}\x1b[95m{}\x1b[0m\n{}01{}02{}03\n",
+        form_board(board, max_len),
+        "_".repeat(max_len * 6 + 6),
+        " ".repeat(max_len),
+        " ".repeat(max_len * 2),
+        " ".repeat(max_len * 2)
+    );
+}
+
+// gibt einen String mit den Stapeln zurrück
+fn form_board(board: &[Vec<Scheibe>; 3], max_len: usize) -> String {
     let mut output: String = String::new();
 
-    for i in 0..10 {
+    for i in 0..max_len {
         for j in 0..3 {
-            if 10 - i <= board[j].len() {
-                output.push_str(board[j][9 - i].draw().as_str())
+            if max_len - i <= board[j].len() {
+                output.push_str(board[j][max_len - 1 - i].draw(max_len as u8).as_str())
             } else {
-                output.push_str(" ".repeat(10).as_str());
-                output.push_str("||");
-                output.push_str(" ".repeat(10).as_str());
+                output.push_str(" ".repeat(max_len).as_str());
+                output.push_str("\x1b[93m||\x1b[0m");
+                output.push_str(" ".repeat(max_len).as_str());
             }
         }
         output.push('\n')
@@ -90,25 +111,44 @@ fn print_board(board: &[Vec<Scheibe>; 3]) -> String {
 
 // Wir sollten es ja Objektorientiert machen
 // Ich hoffe das reicht an Objekten
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct Scheibe {
-    width: i32,
+    width: u8,
 }
 impl Scheibe {
-    pub fn new(width: i32) -> Self {
+    pub fn new(width: u8) -> Self {
         Scheibe { width: width }
     }
-    pub fn draw(&self) -> String {
+
+    pub fn draw(&self, max_len: u8) -> String {
         let mut string: String = String::new();
         string.push(' ');
 
-        for _ in 0..10 - self.width {
+        for _ in 0..max_len - self.width {
             string.push(' ');
         }
-        for _ in 0..self.width * 2 {
-            string.push('#');
+        string.push_str("\x1b[92m");
+        for _ in 0..self.width {
+            string.push_str("#");
         }
-        for _ in 0..10 - self.width {
+        string.push_str("\x1b[0m");
+
+        // featur, dass die länge angezeigt wird
+
+        //if self.width < 10 {
+        //    string.push('0');
+        //    string.push_str(self.width.to_string().as_str())
+        //} else {
+        //    string.push_str(self.width.to_string().as_str());
+        //}
+
+        string.push_str("\x1b[91m");
+        for _ in 0..self.width {
+            string.push_str("#");
+        }
+        string.push_str("\x1b[0m");
+
+        for _ in 0..max_len - self.width {
             string.push(' ');
         }
 
