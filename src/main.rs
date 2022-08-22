@@ -1,9 +1,10 @@
 fn main() {
-    let max_len = 4;
+    let max_len: u8 = 8;
 
     // variablen initialisieren
     let mut board: [Vec<Scheibe>; 3] = [Vec::new(), Vec::new(), Vec::new()];
     let reader = std::io::stdin();
+
     // einen Turm machen
     for i in 0..max_len {
         board[0].push(Scheibe::new(max_len - i));
@@ -21,7 +22,7 @@ Hier ein Beispiel wenn du die Scheibe von Stapel 3 auf Stapel 1 verschieben möc
         print_board(&board, max_len as usize);
 
         // Die Spielereingabe bekommen
-        let mut input = String::new();
+        let mut input: String = String::new();
         match reader.read_line(&mut input) {
             Ok(_) => {}
             Err(e) => {
@@ -53,7 +54,7 @@ Hier ein Beispiel wenn du die Scheibe von Stapel 3 auf Stapel 1 verschieben möc
             if board[arg[1] - 1].len() == 0
                 || board[arg[0] - 1].last().unwrap().width < board[arg[1] - 1].last().unwrap().width
             {
-                let temp = board[arg[0] - 1].pop().unwrap();
+                let temp: Scheibe = board[arg[0] - 1].pop().unwrap();
                 board[arg[1] - 1].push(temp);
             } else {
                 println!("Beachte die Regeln!\nDu darfst keine Scheibe auf eine kleinere Scheibe legen!\nSonst wäre es doch zu einfach.\n")
@@ -133,7 +134,7 @@ impl Scheibe {
         }
         string.push_str("\x1b[0m");
 
-        // featur, dass die länge angezeigt wird
+        // feature, dass die länge angezeigt wird
 
         //if self.width < 10 {
         //    string.push('0');
