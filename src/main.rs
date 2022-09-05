@@ -1,13 +1,31 @@
 fn main() {
-    let max_len: u8 = 8;
+    let max_len: u8;
+
+    if let Some(len) = std::env::args().nth(1) {
+        max_len = len.parse::<u8>().unwrap()
+    } else {
+        max_len = 10;
+    }
+    let autosolve;
+    if let Some(_) = std::env::args().nth(2) {
+        autosolve = true;
+    } else {
+        autosolve = false;
+    }
+    let ausgeben;
+    if let Some(_) = std::env::args().nth(3) {
+        ausgeben = true;
+    } else {
+        ausgeben = false;
+    }
 
     // variablen initialisieren
-    let mut board: [Vec<Scheibe>; 3] = [Vec::new(), Vec::new(), Vec::new()];
-    let reader = std::io::stdin();
+    let mut board: [Vec<u8>; 3] = [Vec::new(), Vec::new(), Vec::new()];
+    let mut versuche: u128 = 0;
 
     // einen Turm machen
     for i in 0..max_len {
-        board[0].push(Scheibe::new(max_len - i));
+        board[0].push(max_len - i);
     }
 
     // Die Spielbeschreibung (Formatierung nicht ändern)
@@ -17,14 +35,56 @@ Du darfst dabei keine Scheibe auf eine kleinere Scheibe legen.\n\n
 Die Scheiben verschiebst du indem du erst die Nummer des Stapels angibst von dem du die Scheibe heben möchtest, dann eine Leerstele eingibst und darauf den Stapel eingibst auf den du die Scheibe legen möchtest.\n
 Hier ein Beispiel wenn du die Scheibe von Stapel 3 auf Stapel 1 verschieben möchtest:\n\n3 1\n\nViel Spaß\n\n");
 
+    if autosolve {
+        solve(
+            1,
+            2,
+            3,
+            max_len,
+            &mut board,
+            max_len,
+            ausgeben,
+            &mut versuche,
+        );
+    } else {
+        selber_spielen(&mut board, max_len, &mut versuche)
+    }
+
+    println!("\nDu hast gewonnen!");
+    println!("Versuche: {}", versuche);
+    println!("Optimal: {}", (2 as u128).pow(max_len as u32) - 1)
+}
+
+fn selber_spielen(board: &mut [Vec<u8>; 3], max_len: u8, versuche: &mut u128) {
+    let reader = std::io::stdin();
+
     // der GAME LOOP
     loop {
-        print_board(&board, max_len as usize);
+        *versuche += 1;
+        print_board(&board, max_len);
+
+        let mut input: String = String::new();
 
         // Die Spielereingabe bekommen
-        let mut input: String = String::new();
+        let arg: [u8; 2];
         match reader.read_line(&mut input) {
-            Ok(_) => {}
+            Ok(_) => {
+                let iter: Vec<u8> = input
+                    .trim()
+                    .split(" ")
+                    .map(|x| {
+                        x.parse::<u8>()
+                            .expect("\n\nDu musst Zahlen eingeben. Zahlen!\n\n")
+                    })
+                    .collect();
+                arg = [iter[0] - 1, iter[1] - 1];
+
+                if arg[0] > 3 || arg[1] > 3 {
+                    println!("Gib zwei Ziffern von 1 bis 3 mit einer Leerstelle dazwischen an.\n");
+                    continue;
+                }
+            }
+
             Err(e) => {
                 println!("Gib zwei Ziffern von 1 bis 3 mit einer Leerstelle dazwischen an.\n");
                 println!("ERROR: {} \n", e);
@@ -32,128 +92,117 @@ Hier ein Beispiel wenn du die Scheibe von Stapel 3 auf Stapel 1 verschieben möc
             }
         }
 
-        // Die Eingebe in Nummern umwandeln
-        let arg: Vec<usize> = input
-            .trim()
-            .split(" ")
-            .map(|x| {
-                x.parse::<usize>()
-                    .expect("\n\nDu musst Zahlen eingeben. Zahlen!\n\n")
-            })
-            .collect();
+        //bewegen
+        bewegen(arg[0], arg[1], board);
 
-        // testen, ob die Nummern zu Stapeln Zeigen
-        if arg.len() > 1
-            && arg[1] > 0
-            && arg[1] < 4
-            && arg[1] > 0
-            && arg[1] < 4
-            && board[arg[0] - 1].len() > 0
-        {
-            //testet, ob da keine kleinere Scheibe liegt
-            if board[arg[1] - 1].len() == 0
-                || board[arg[0] - 1].last().unwrap().width < board[arg[1] - 1].last().unwrap().width
-            {
-                let temp: Scheibe = board[arg[0] - 1].pop().unwrap();
-                board[arg[1] - 1].push(temp);
-            } else {
-                println!("Beachte die Regeln!\nDu darfst keine Scheibe auf eine kleinere Scheibe legen!\nSonst wäre es doch zu einfach.\n")
-            }
-        } else {
-            println!("Gebe zwei Ziffern an die mit einem leerzeichen getrennt sind.\nDabei ist die erste Ziffer der Stapel von dem du die Scheibe nimmst.\nUnd die zweite Ziffer ist der Stapel auf den du die Scheibe ablegen möchtest.\n");
-        }
-        if won(&board, max_len as usize) {
+        if won(&board, max_len as u8) {
             break;
         }
+        print_board(&board, max_len as u8);
     }
-    print_board(&board, max_len as usize);
-
-    println!("\nDu hast gewonnen!");
 }
 
 // tested, ob man gewonnen hat
-fn won(board: &[Vec<Scheibe>; 3], max_len: usize) -> bool {
-    if board[2].len() == max_len || board[1].len() == max_len {
+fn won(board: &[Vec<u8>; 3], max_len: u8) -> bool {
+    if board[2].len() == max_len as usize || board[1].len() == max_len as usize {
         return true;
     }
     false
 }
 
-// Die CLI Ausgabe
-fn print_board(board: &[Vec<Scheibe>; 3], max_len: usize) {
-    println!(
-        "{}\x1b[95m{}\x1b[0m\n{}01{}02{}03\n",
-        form_board(board, max_len),
-        "_".repeat(max_len * 6 + 6),
-        " ".repeat(max_len),
-        " ".repeat(max_len * 2),
-        " ".repeat(max_len * 2)
-    );
+// bewegen von einer scheibe auf einem stapel zu einem anderen Stapel
+fn bewegen(von: u8, nach: u8, board: &mut [Vec<u8>; 3]) {
+    let arg = [von as usize, nach as usize];
+    // testen, ob die Nummern zu Stapeln Zeigen
+    //testet, ob da keine kleinere Scheibe liegt
+    if board[arg[1] - 1].len() == 0
+        || board[arg[0] - 1].last().unwrap() < board[arg[1] - 1].last().unwrap()
+    {
+        let temp: u8 = board[arg[0] - 1].pop().unwrap();
+        board[arg[1] - 1].push(temp);
+    } else {
+        println!("Beachte die Regeln!\nDu darfst keine Scheibe auf eine kleinere Scheibe legen!\n")
+    }
 }
 
-// gibt einen String mit den Stapeln zurrück
-fn form_board(board: &[Vec<Scheibe>; 3], max_len: usize) -> String {
+// Die CLI Ausgabe
+fn print_board(board: &[Vec<u8>; 3], max_len: u8) {
     let mut output: String = String::new();
+    let max_len_usize: usize = max_len as usize;
 
-    for i in 0..max_len {
+    for i in 0..max_len_usize {
         for j in 0..3 {
-            if max_len - i <= board[j].len() {
-                output.push_str(board[j][max_len - 1 - i].draw(max_len as u8).as_str())
+            if max_len_usize - i <= board[j].len() {
+                output.push_str(
+                    format!(
+                        "{}\x1b[91m{}\x1b[92m{}\x1b[0m{}",
+                        " ".repeat((max_len - board[j][max_len_usize - 1 - i] + 1) as usize),
+                        "#".repeat((board[j][max_len_usize - 1 - i]) as usize),
+                        "#".repeat((board[j][max_len_usize - 1 - i]) as usize),
+                        " ".repeat((max_len - board[j][max_len_usize - 1 - i] + 1) as usize)
+                    )
+                    .as_str(),
+                )
             } else {
-                output.push_str(" ".repeat(max_len).as_str());
-                output.push_str("\x1b[93m||\x1b[0m");
-                output.push_str(" ".repeat(max_len).as_str());
+                let space = " ".repeat(max_len_usize);
+                output.push_str(format!("{}\x1b[93m||\x1b[0m{}", space, space).as_str());
             }
         }
-        output.push('\n')
+        output.push_str("\n");
     }
-    output
+    output.push_str(
+        format!(
+            "\n\x1b[95m{}\x1b[0m\n{}01{}02{}03\n",
+            "_".repeat(max_len_usize * 6 + 6),
+            " ".repeat(max_len_usize),
+            " ".repeat(max_len_usize * 2),
+            " ".repeat(max_len_usize * 2),
+        )
+        .as_str(),
+    );
+    println!("{}", output,);
 }
 
-// Wir sollten es ja Objektorientiert machen
-// Ich hoffe das reicht an Objekten
-#[derive(Clone, Copy, Debug)]
-struct Scheibe {
-    width: u8,
-}
-impl Scheibe {
-    pub fn new(width: u8) -> Self {
-        Scheibe { width: width }
-    }
-
-    pub fn draw(&self, max_len: u8) -> String {
-        let mut string: String = String::new();
-        string.push(' ');
-
-        for _ in 0..max_len - self.width {
-            string.push(' ');
+// algorithmus zum lösen
+fn solve(
+    p_von: u8,
+    p_über: u8,
+    p_nach: u8,
+    p_höhe: u8,
+    board: &mut [Vec<u8>; 3],
+    max_len: u8,
+    ausgeben: bool,
+    versuche: &mut u128,
+) {
+    if p_höhe == 0 {
+    } else {
+        solve(
+            p_von,
+            p_nach,
+            p_über,
+            p_höhe - 1,
+            board,
+            max_len,
+            ausgeben,
+            versuche,
+        );
+        let board_test = board.clone();
+        bewegen(p_von, p_nach, board);
+        if board[0].len() != board_test[0].len() || board[1].len() != board_test[1].len() {
+            if ausgeben {
+                print_board(&board, max_len);
+            }
+            *versuche += 1;
         }
-        string.push_str("\x1b[92m");
-        for _ in 0..self.width {
-            string.push_str("#");
-        }
-        string.push_str("\x1b[0m");
-
-        // feature, dass die länge angezeigt wird
-
-        //if self.width < 10 {
-        //    string.push('0');
-        //    string.push_str(self.width.to_string().as_str())
-        //} else {
-        //    string.push_str(self.width.to_string().as_str());
-        //}
-
-        string.push_str("\x1b[91m");
-        for _ in 0..self.width {
-            string.push_str("#");
-        }
-        string.push_str("\x1b[0m");
-
-        for _ in 0..max_len - self.width {
-            string.push(' ');
-        }
-
-        string.push(' ');
-        string
+        solve(
+            p_über,
+            p_von,
+            p_nach,
+            p_höhe - 1,
+            board,
+            max_len,
+            ausgeben,
+            versuche,
+        );
     }
 }
