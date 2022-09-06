@@ -1,6 +1,10 @@
 fn main() {
-    let max_len: u8;
+    ctrlc::set_handler(move || {
+        std::process::exit(0x0100);
+    })
+    .expect("Error setting Ctrl-C handler");
 
+    let max_len: u8;
     if let Some(len) = std::env::args().nth(1) {
         max_len = len.parse::<u8>().unwrap()
     } else {
