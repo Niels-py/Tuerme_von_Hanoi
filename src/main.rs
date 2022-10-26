@@ -4,24 +4,18 @@ fn main() {
     })
     .expect("Error setting Ctrl-C handler");
 
-    let max_len: u8;
-    if let Some(len) = std::env::args().nth(1) {
-        max_len = len.parse::<u8>().unwrap()
-    } else {
-        max_len = 10;
-    }
-    let autosolve;
-    if let Some(_) = std::env::args().nth(2) {
-        autosolve = true;
-    } else {
-        autosolve = false;
-    }
-    let ausgeben;
-    if let Some(_) = std::env::args().nth(3) {
-        ausgeben = true;
-    } else {
-        ausgeben = false;
-    }
+    let max_len: u8 = match std::env::args().nth(1) {
+        Some(len) => len.parse::<u8>().unwrap(),
+        None => 10,
+    };
+    let autosolve = match std::env::args().nth(2) {
+        Some(_) => true,
+        None => false,
+    };
+    let ausgeben = match std::env::args().nth(3) {
+        Some(_) => true,
+        None => false,
+    };
 
     // variablen initialisieren
     let mut board: [Vec<u8>; 3] = [Vec::new(), Vec::new(), Vec::new()];
@@ -41,9 +35,9 @@ Hier ein Beispiel wenn du die Scheibe von Stapel 3 auf Stapel 1 verschieben möc
 
     if autosolve {
         solve(
+            0,
             1,
             2,
-            3,
             max_len,
             &mut board,
             max_len,
@@ -61,17 +55,16 @@ Hier ein Beispiel wenn du die Scheibe von Stapel 3 auf Stapel 1 verschieben möc
 
 fn selber_spielen(board: &mut [Vec<u8>; 3], max_len: u8, versuche: &mut u128) {
     let reader = std::io::stdin();
+    print_board(&board, max_len);
 
     // der GAME LOOP
     loop {
         *versuche += 1;
-        print_board(&board, max_len);
 
         let mut input: String = String::new();
 
         // Die Spielereingabe bekommen
-        let arg: [u8; 2];
-        match reader.read_line(&mut input) {
+        let arg: [u8; 2] = match reader.read_line(&mut input) {
             Ok(_) => {
                 let iter: Vec<u8> = input
                     .trim()
@@ -81,12 +74,11 @@ fn selber_spielen(board: &mut [Vec<u8>; 3], max_len: u8, versuche: &mut u128) {
                             .expect("\n\nDu musst Zahlen eingeben. Zahlen!\n\n")
                     })
                     .collect();
-                arg = [iter[0] - 1, iter[1] - 1];
-
-                if arg[0] > 3 || arg[1] > 3 {
+                if iter[0] > 3 || iter[1] > 3 {
                     println!("Gib zwei Ziffern von 1 bis 3 mit einer Leerstelle dazwischen an.\n");
                     continue;
                 }
+                [iter[0] - 1, iter[1] - 1]
             }
 
             Err(e) => {
@@ -94,7 +86,7 @@ fn selber_spielen(board: &mut [Vec<u8>; 3], max_len: u8, versuche: &mut u128) {
                 println!("ERROR: {} \n", e);
                 continue;
             }
-        }
+        };
 
         //bewegen
         bewegen(arg[0], arg[1], board);
@@ -119,11 +111,9 @@ fn bewegen(von: u8, nach: u8, board: &mut [Vec<u8>; 3]) {
     let arg = [von as usize, nach as usize];
     // testen, ob die Nummern zu Stapeln Zeigen
     //testet, ob da keine kleinere Scheibe liegt
-    if board[arg[1] - 1].len() == 0
-        || board[arg[0] - 1].last().unwrap() < board[arg[1] - 1].last().unwrap()
-    {
-        let temp: u8 = board[arg[0] - 1].pop().unwrap();
-        board[arg[1] - 1].push(temp);
+    if board[arg[1]].len() == 0 || board[arg[0]].last().unwrap() < board[arg[1]].last().unwrap() {
+        let temp: u8 = board[arg[0]].pop().unwrap();
+        board[arg[1]].push(temp);
     } else {
         println!("Beachte die Regeln!\nDu darfst keine Scheibe auf eine kleinere Scheibe legen!\n")
     }
